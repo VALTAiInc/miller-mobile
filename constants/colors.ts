@@ -1,33 +1,28 @@
-const Colors = {
-  dark: {
-    background: "#0A0C10",
-    surface: "#141820",
-    surfaceLight: "#1C2230",
-    card: "#181E28",
-    border: "#2A3040",
-    text: "#F0F2F5",
-    textSecondary: "#8A94A6",
-    textMuted: "#5A6478",
-    tint: "#E87A20",
-    tintLight: "#F09A50",
-    accent: "#E87A20",
-    accentDark: "#C06010",
-    userBubble: "#E87A20",
-    assistantBubble: "#1C2230",
-    inputBg: "#141820",
-    danger: "#E54545",
-    success: "#34C759",
-    recording: "#E54545",
-    tabBar: "#0D0F14",
-    tabIconDefault: "#5A6478",
-    tabIconSelected: "#E87A20",
-  },
+// constants/colors.ts
+
+export const Brand = {
+  orange: "#f16109",
+  // add more brand colors here later if you want
+};
+
+export const Colors = {
+  primary: "#f16109",
+  background: "#0a0a0a",
+  card: "#1a1a1a",
+  cardLight: "#242424",
+  text: "#ffffff",
+  textSecondary: "#999999",
+  textDark: "#000000",
+  white: "#ffffff",
+  border: "#2a2a2a",
+  danger: "#ff4444",
+  success: "#22c55e",
   light: {
-    text: "#000",
-    background: "#fff",
-    tint: "#E87A20",
-    tabIconDefault: "#5A6478",
-    tabIconSelected: "#E87A20",
+    text: "#ffffff",
+    background: "#0a0a0a",
+    tint: "#f16109",
+    tabIconDefault: "#666666",
+    tabIconSelected: "#f16109",
   },
 };
 

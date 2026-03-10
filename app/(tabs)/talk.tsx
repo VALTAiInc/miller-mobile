@@ -1,803 +1,902 @@
-import React, { useState, useRef, useCallback, useEffect } from "react";
+// app/(tabs)/talk.tsx
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
-  View,
   TextInput,
-  Pressable,
-  FlatList,
-  ActivityIndicator,
-  Platform,
-  Keyboard,
+  View,
+  Animated,
+  Easing,
 } from "react-native";
-import { Audio } from "expo-av";
-import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { KeyboardAvoidingView } from "react-native-keyboard-controller";
-import {
-  useFonts,
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-} from "@expo-google-fonts/inter";
-import Colors from "../../constants/colors";
+import { Audio } from "expo-av";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import * as Haptics from "expo-haptics";
+import * as FileSystem from "expo-file-system/legacy";
+import { Buffer } from "buffer";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useKeepAwake } from "expo-keep-awake";
 
-const OPENAI_API_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY || "";
+// Ensure Buffer exists (needed for base64 conversions on iOS/React Native)
+(globalThis as any).Buffer = (globalThis as any).Buffer || Buffer;
 
-const SYSTEM_PROMPT =
-  "You are SAWWISE, an expert assistant for the HYDMECH S-20 Series III Horizontal Pivot Bandsaw. Answer concisely, prioritize safety, and give step-by-step guidance when appropriate.";
+// Prefer env override if you set it. Fallback to your current deployed Replit app.
+const API_BASE =
+  (process.env.EXPO_PUBLIC_API_BASE as string) ||
+  "https://weldwiselocked-build-for-appstore.replit.app";
 
-interface Message {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
+// Mentor context for the chat API
+const MANUAL_CONTEXT = `
+You are WeldWise, a jobsite-ready welding mentor.
+
+Scope:
+- Only answer questions about welding, fabrication, safety, WPS/procedure, troubleshooting, metallurgy, fit-up, consumables, parameters, weld defects, inspection, and relevant codes or standards.
+- If the message is not clearly about welding, respond with ONE short sentence redirecting to welding (example: "I can help with welding — what process and material are you working with?").
+- Do NOT provide relationship, life, personal, creative writing, or general coaching advice.
+
+Tone:
+- Calm, confident, practical.
+- Speak like an experienced journeyperson who knows both the correct code answer and the real-world field trick.
+- No fluff. No motivational coaching. No off-topic commentary.
+
+Format:
+- Plain text only.
+- No markdown.
+- No headings.
+- No bullet lists.
+- No bold or special formatting.
+- Short, clean paragraphs only.
+
+How to answer:
+- Start with the correct code-compliant guideline or standard practice.
+- Then optionally add one short "Shop Tip" or "Field Insight" from experienced welders.
+- Ask 1 clarifying question only if necessary.
+- Prioritize safety and code-compliant best practice.
+- Give step-by-step troubleshooting in the logical order a real welder would follow.
+- Include realistic parameter ranges when relevant (amps, volts, wire feed speed, gas flow, cup size, stickout, travel angle, travel speed).
+- If unsafe conditions are possible (fumes, confined space, energized equipment, hot work), warn clearly and early.
+
+Length:
+- Keep responses concise, practical, and jobsite-ready.
+`.trim();
+
+type Role = "user" | "assistant";
+type Msg = { id: string; role: Role; content: string; ts: number };
+
+const STORAGE_DISCLAIMER_KEY = "weldwise_disclaimer_accepted_v1";
+
+function uid() {
+  return `${Date.now()}_${Math.random().toString(16).slice(2)}`;
 }
 
-let msgCounter = 0;
-function uid(): string {
-  msgCounter++;
-  return `m-${Date.now()}-${msgCounter}-${Math.random().toString(36).substr(2, 9)}`;
+async function safeJson(res: Response) {
+  try {
+    return await res.json();
+  } catch {
+    return null;
+  }
 }
 
-type TTSState = "idle" | "playing" | "paused";
+function getMimeFromUri(uri: string) {
+  const u = uri.toLowerCase();
+  if (u.endsWith(".m4a")) return "audio/m4a";
+  if (u.endsWith(".mp3")) return "audio/mpeg";
+  if (u.endsWith(".wav")) return "audio/wav";
+  if (u.endsWith(".aac")) return "audio/aac";
+  if (u.endsWith(".caf")) return "audio/x-caf";
+  if (u.endsWith(".3gp")) return "audio/3gpp";
+  if (u.endsWith(".mp4")) return "audio/mp4";
+  return Platform.OS === "ios" ? "audio/m4a" : "audio/3gpp";
+}
 
 export default function TalkScreen() {
+  useKeepAwake();
+
   const insets = useSafeAreaInsets();
-  const topInset = Platform.OS === "web" ? 67 : insets.top;
-  const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
 
-  const [fontsLoaded] = useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-  });
+  // keep the rest of your existing TalkScreen code starting from your state/hooks...
 
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [inputText, setInputText] = useState("");
-  const [isThinking, setIsThinking] = useState(false);
+  const [messages, setMessages] = useState<Msg[]>(() => [
+    {
+      id: uid(),
+      role: "assistant",
+      content:
+        "I’m WeldWise. Ask me about welding setup, parameters, troubleshooting, fit-up, and safety.",
+      ts: Date.now(),
+    },
+  ]);
+
+  const [input, setInput] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [ttsState, setTtsState] = useState<TTSState>("idle");
+  const [micPermissionOk, setMicPermissionOk] = useState<boolean | null>(null);
+
+  const [ttsStatus, setTtsStatus] = useState<
+    "idle" | "loading" | "playing" | "paused"
+  >("idle");
 
   const recordingRef = useRef<Audio.Recording | null>(null);
-  const soundRef = useRef<Audio.Sound | null>(null);
-  const lockRef = useRef(false);
-  const inputRef = useRef<TextInput>(null);
 
-  useEffect(() => {
-    return () => {
-      if (soundRef.current) {
-        soundRef.current.unloadAsync().catch(() => {});
-        soundRef.current = null;
-      }
-    };
+  // Native TTS playback
+  const soundRef = useRef<Audio.Sound | null>(null);
+
+  // Web TTS playback (browser Audio constructor)
+  const webAudioRef = useRef<any>(null);
+  const lastTtsRef = useRef<{ text: string; ts: number } | null>(null);
+  const scrollRef = useRef<ScrollView | null>(null);
+
+  // One-time disclaimer
+  const [showDisclaimer, setShowDisclaimer] = useState(false);
+
+  // Mic waveform animation (no new deps)
+  const waveAnim = useRef(new Animated.Value(0)).current;
+
+  const scrollBottomPad = useMemo(() => {
+    // Padding for bubbles so they don't get covered by the input bar
+    return 18;
   }, []);
 
-  const stopTTS = useCallback(async () => {
-    if (soundRef.current) {
-      try {
+  function addMessage(role: Role, content: string) {
+    setMessages((prev) => [
+      ...prev,
+      { id: uid(), role, content, ts: Date.now() },
+    ]);
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
+  }
+
+  async function ensureAudioMode(mode: "record" | "playback") {
+    try {
+      if (mode === "record") {
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: true,
+          playsInSilentModeIOS: true,
+          staysActiveInBackground: false,
+          shouldDuckAndroid: true,
+          playThroughEarpieceAndroid: false,
+        } as any);
+      } else {
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: false,
+          playsInSilentModeIOS: true,
+          staysActiveInBackground: false,
+          shouldDuckAndroid: true,
+          playThroughEarpieceAndroid: false,
+        } as any);
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  async function checkMicPermission() {
+    try {
+      const perm = await Audio.getPermissionsAsync();
+      if (perm.status === "granted") {
+        setMicPermissionOk(true);
+        return true;
+      }
+      const req = await Audio.requestPermissionsAsync();
+      const ok = req.status === "granted";
+      setMicPermissionOk(ok);
+      if (!ok) {
+        addMessage(
+          "assistant",
+          "Mic permission is off. Enable it in iPhone Settings for WeldWise, then try again.",
+        );
+      }
+      return ok;
+    } catch {
+      setMicPermissionOk(false);
+      addMessage("assistant", "Mic permission check failed.");
+      return false;
+    }
+  }
+
+  async function stopAnyTTS() {
+    // Stop native sound
+    try {
+      if (soundRef.current) {
         await soundRef.current.stopAsync();
         await soundRef.current.unloadAsync();
-      } catch {}
-      soundRef.current = null;
+        soundRef.current = null;
+      }
+    } catch {
+      // ignore
     }
-    setTtsState("idle");
-  }, []);
 
-  const pauseTTS = useCallback(async () => {
-    if (soundRef.current && ttsState === "playing") {
-      try {
-        await soundRef.current.pauseAsync();
-        setTtsState("paused");
-      } catch {}
+    // Stop web audio
+    try {
+      if (webAudioRef.current) {
+        webAudioRef.current.pause?.();
+        webAudioRef.current.currentTime = 0;
+        webAudioRef.current = null;
+      }
+    } catch {
+      // ignore
     }
-  }, [ttsState]);
 
-  const resumeTTS = useCallback(async () => {
-    if (soundRef.current && ttsState === "paused") {
-      try {
-        await soundRef.current.playAsync();
-        setTtsState("playing");
-      } catch {}
-    }
-  }, [ttsState]);
+    setTtsStatus("idle");
+  }
 
-  const playTTS = useCallback(async (text: string) => {
-    await stopTTS();
+  async function playTTS(text: string) {
+    if (!text.trim()) return;
+   
+    const t0 = Date.now();
+    console.log("[TTS] start");
 
     try {
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: false,
-        playsInSilentModeIOS: true,
-        shouldDuckAndroid: true,
-      });
+      setTtsStatus("loading");
 
-      const response = await fetch("https://api.openai.com/v1/audio/speech", {
+      const tFetchStart = Date.now();
+      const res = await fetch(`${API_BASE}/api/speak`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "tts-1",
-          voice: "alloy",
-          input: text,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
       });
+      console.log("[TTS] fetch done ms:", Date.now() - tFetchStart, "status:", res.status);
 
-      if (!response.ok) {
-        console.error("TTS request failed:", response.status);
-        return;
+      if (!res.ok) {
+        const body = await safeJson(res);
+        throw new Error(`speak ${res.status}: ${JSON.stringify(body)}`);
       }
 
-      const arrayBuffer = await response.arrayBuffer();
-      const bytes = new Uint8Array(arrayBuffer);
-      let binary = "";
-      for (let i = 0; i < bytes.length; i++) {
-        binary += String.fromCharCode(bytes[i]);
-      }
-      const base64 = btoa(binary);
-      const uri = `data:audio/mpeg;base64,${base64}`;
+      // WEB
+      if (Platform.OS === "web") {
+        const tBlob = Date.now();
+        const blob = await res.blob();
+        console.log("[TTS] blob ms:", Date.now() - tBlob, "bytes:", blob.size);
 
-      const { sound } = await Audio.Sound.createAsync({ uri });
-      soundRef.current = sound;
-      setTtsState("playing");
+        const url = URL.createObjectURL(blob);
+        await stopAnyTTS();
 
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) {
-          sound.unloadAsync().catch(() => {});
-          soundRef.current = null;
-          setTtsState("idle");
-        }
-      });
+        const A = (globalThis as any).Audio;
+        const a = new A(url);
+        webAudioRef.current = a;
 
-      await sound.playAsync();
-    } catch (err) {
-      console.error("TTS error:", err);
-      setTtsState("idle");
-    }
-  }, [stopTTS]);
+        a.onplaying = () =>
+          console.log("[TTS] web onplaying ms since start:", Date.now() - t0);
 
-  const chatCompletion = useCallback(
-    async (allMessages: Message[]): Promise<string> => {
-      const apiMessages = [
-        { role: "system" as const, content: SYSTEM_PROMPT },
-        ...allMessages.map((m) => ({ role: m.role, content: m.content })),
-      ];
-
-      const response = await fetch(
-        "https://api.openai.com/v1/chat/completions",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${OPENAI_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "gpt-3.5-turbo",
-            messages: apiMessages,
-            max_tokens: 1024,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(`Chat API error ${response.status}: ${errText}`);
-      }
-
-      const data = await response.json();
-      return data.choices?.[0]?.message?.content || "I could not generate a response.";
-    },
-    []
-  );
-
-  const sendTextMessage = useCallback(
-    async (text: string) => {
-      if (!text.trim() || isThinking) return;
-
-      const userMsg: Message = { id: uid(), role: "user", content: text.trim() };
-      const updatedMessages = [...messages, userMsg];
-      setMessages(updatedMessages);
-      setInputText("");
-      setIsThinking(true);
-
-      try {
-        const reply = await chatCompletion(updatedMessages);
-        const assistantMsg: Message = {
-          id: uid(),
-          role: "assistant",
-          content: reply,
+        a.onended = () => {
+          try {
+            URL.revokeObjectURL(url);
+          } catch {}
+          setTtsStatus("idle");
         };
-        setMessages((prev) => [...prev, assistantMsg]);
-      } catch (err: any) {
-        setMessages((prev) => [
-          ...prev,
-          { id: uid(), role: "assistant", content: "Sorry, something went wrong. Please try again." },
-        ]);
-      } finally {
-        setIsThinking(false);
-      }
-    },
-    [messages, isThinking, chatCompletion]
-  );
 
-  const transcribeAudio = useCallback(async (uri: string): Promise<string> => {
-    const formData = new FormData();
-
-    if (Platform.OS === "web") {
-      const response = await fetch(uri);
-      const blob = await response.blob();
-      formData.append("file", blob, "recording.webm");
-    } else {
-      formData.append("file", {
-        uri,
-        name: "recording.m4a",
-        type: "audio/m4a",
-      } as any);
-    }
-    formData.append("model", "whisper-1");
-
-    const response = await fetch(
-      "https://api.openai.com/v1/audio/transcriptions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
-        },
-        body: formData,
-      }
-    );
-
-    if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(`Transcription error ${response.status}: ${errText}`);
-    }
-
-    const data = await response.json();
-    return data.text || "";
-  }, []);
-
-  const startRecording = useCallback(async () => {
-    if (lockRef.current) return;
-    lockRef.current = true;
-
-    try {
-      if (recordingRef.current) {
-        try {
-          await recordingRef.current.stopAndUnloadAsync();
-        } catch {}
-        recordingRef.current = null;
-      }
-
-      const { granted } = await Audio.requestPermissionsAsync();
-      if (!granted) {
-        lockRef.current = false;
+        await a.play();
+        setTtsStatus("playing");
         return;
       }
 
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-        shouldDuckAndroid: true,
-      });
+      // NATIVE
+      const tArr = Date.now();
+      const arr = await res.arrayBuffer();
+      console.log("[TTS] arrayBuffer ms:", Date.now() - tArr, "bytes:", arr.byteLength);
 
-      const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      const tB64 = Date.now();
+      const b64 = Buffer.from(arr).toString("base64");
+      console.log("[TTS] base64 ms:", Date.now() - tB64);
+
+      const dataUri = `data:audio/mpeg;base64,${b64}`;
+
+      await stopAnyTTS();
+      await ensureAudioMode("playback");
+
+      const tCreate = Date.now();
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: dataUri },
+        { shouldPlay: true }
       );
-      recordingRef.current = recording;
-      setIsRecording(true);
-    } catch (err) {
-      console.error("Start recording error:", err);
+      console.log("[TTS] createAsync ms:", Date.now() - tCreate);
+
+      soundRef.current = sound;
+      setTtsStatus("playing");
+
+      let logged = false;
+      sound.setOnPlaybackStatusUpdate((st: any) => {
+        if (!st) return;
+
+        if (!logged && st.isLoaded && st.isPlaying) {
+          logged = true;
+          console.log("[TTS] first isPlaying ms since start:", Date.now() - t0);
+        }
+
+        if (st.isLoaded && st.didJustFinish) {
+          stopAnyTTS();
+        } else if (st.isLoaded) {
+          if (st.isPlaying) setTtsStatus("playing");
+          else if (st.positionMillis > 0 && !st.isPlaying)
+            setTtsStatus("paused");
+        }
+      });
+    } catch (e: any) {
+      setTtsStatus("idle");
+      console.log("[TTS] error ms since start:", Date.now() - t0);
+      addMessage("assistant", `TTS error: ${String(e?.message || e)}`);
     }
+  }
 
-    lockRef.current = false;
-  }, []);
+  async function pauseTTS() {
+    try {
+      if (Platform.OS === "web") {
+        if (webAudioRef.current) {
+          webAudioRef.current.pause();
+          setTtsStatus("paused");
+        }
+        return;
+      }
+      if (soundRef.current) {
+        await soundRef.current.pauseAsync();
+        setTtsStatus("paused");
+      }
+    } catch {
+      // ignore
+    }
+  }
 
-  const stopRecording = useCallback(async () => {
-    if (lockRef.current || !recordingRef.current) return;
-    lockRef.current = true;
+  async function resumeTTS() {
+    try {
+      if (Platform.OS === "web") {
+        if (webAudioRef.current) {
+          await webAudioRef.current.play();
+          setTtsStatus("playing");
+        }
+        return;
+      }
+      if (soundRef.current) {
+        await soundRef.current.playAsync();
+        setTtsStatus("playing");
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  async function sendTextMessage(text: string) {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+
+    addMessage("user", trimmed);
+    setInput("");
+    setIsProcessing(true);
 
     try {
-      const recording = recordingRef.current;
+      const payload = {
+        messages: [
+          { role: "system", content: MANUAL_CONTEXT },
+          ...messages.map((m) => ({ role: m.role, content: m.content })),
+          { role: "user", content: trimmed },
+        ],
+      };
+
+      const res = await fetch(`${API_BASE}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const body = await safeJson(res);
+        throw new Error(`chat ${res.status}: ${JSON.stringify(body)}`);
+      }
+
+      const data = (await res.json()) as { content?: string };
+      const reply = (data?.content || "").trim() || "No response.";
+      addMessage("assistant", reply);
+
+        // TTS: speak first chunk, once per reply
+      const ttsText = reply.replace(/\s+/g, " ").trim().slice(0, 220);
+
+        if (ttsText) {
+          const now = Date.now();
+          const prev = lastTtsRef.current;
+
+          // Skip only if it's the same text and we fired very recently (prevents double-trigger)
+          if (prev && prev.text === ttsText && now - prev.ts < 1200) {
+            console.log("[TTS] skipped duplicate call");
+          } else {
+            lastTtsRef.current = { text: ttsText, ts: now };
+            playTTS(ttsText);
+          }
+        }
+      
+    } catch (e: any) {
+      addMessage(
+        "assistant",
+        `I can't reach the server right now.\nCheck API_BASE and /api/health.\n\nAPI_BASE: ${API_BASE}\nError: ${String(
+          e?.message || e
+        )}`
+      );
+    } finally {
+      setIsProcessing(false);
+    }
+  }
+  async function startRecording() {
+    if (isProcessing) return;
+
+    const ok = await checkMicPermission();
+    if (!ok) return;
+
+    try {
+      await stopAnyTTS();
+      await ensureAudioMode("record");
+
+      const rec = new Audio.Recording();
+      await rec.prepareToRecordAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY,
+      );
+      await rec.startAsync();
+
+      recordingRef.current = rec;
+      setIsRecording(true);
+      Haptics.selectionAsync();
+    } catch (e: any) {
+      addMessage(
+        "assistant",
+        `Recording failed to start. ${String(e?.message || e)}`,
+      );
+    }
+  }
+
+  async function stopRecordingAndSend() {
+    try {
+      const rec = recordingRef.current;
       recordingRef.current = null;
       setIsRecording(false);
 
-      await recording.stopAndUnloadAsync();
-      const uri = recording.getURI();
+      if (!rec) return;
 
-      if (!uri) {
-        lockRef.current = false;
-        return;
-      }
+      await rec.stopAndUnloadAsync();
+      const uri = rec.getURI();
+      if (!uri) return;
 
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: false,
-        playsInSilentModeIOS: true,
-        shouldDuckAndroid: true,
+      setIsProcessing(true);
+
+
+      const mime = getMimeFromUri(uri);
+      const formData = new FormData();
+      const filename = uri.split("/").pop() || "recording.m4a";
+
+      formData.append("file", {
+        uri,
+        name: filename,
+        type: mime,
+      } as any);
+
+      const transcriptRes = await fetch(`${API_BASE}/api/transcribe`, {
+        method: "POST",
+        body: formData,
       });
 
-      setIsThinking(true);
+      if (!transcriptRes.ok) {
+        const body = await safeJson(transcriptRes);
+        throw new Error(
+          `transcribe ${transcriptRes.status}: ${JSON.stringify(body)}`,
+        );
+      }
 
-      const transcript = await transcribeAudio(uri);
+      const transcriptData = await transcriptRes.json();
+      const cleaned = (transcriptData?.text || "").trim();
 
-      if (!transcript.trim()) {
-        setIsThinking(false);
-        lockRef.current = false;
+      if (!cleaned) {
+        addMessage(
+          "assistant",
+          "I didn't catch that clearly. Try again a little closer to the mic.",
+        );
         return;
       }
 
-      const userMsg: Message = {
-        id: uid(),
-        role: "user",
-        content: transcript,
-      };
-
-      const currentMessages = [...messages, userMsg];
-      setMessages(currentMessages);
-
-      const reply = await chatCompletion(currentMessages);
-      const assistantMsg: Message = {
-        id: uid(),
-        role: "assistant",
-        content: reply,
-      };
-      setMessages((prev) => [...prev, assistantMsg]);
-      setIsThinking(false);
-
-      playTTS(reply);
-    } catch (err: any) {
-      console.error("Voice flow error:", err);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: uid(),
-          role: "assistant",
-          content: "Sorry, I had trouble processing your voice. Please try again.",
-        },
-      ]);
-      setIsThinking(false);
-    }
-
-    lockRef.current = false;
-  }, [messages, transcribeAudio, chatCompletion, playTTS]);
-
-  const toggleRecording = useCallback(() => {
-    if (isRecording) {
-      stopRecording();
-    } else {
-      stopTTS();
-      startRecording();
-    }
-  }, [isRecording, startRecording, stopRecording, stopTTS]);
-
-  const renderMessage = useCallback(
-    ({ item }: { item: Message }) => {
-      const isUser = item.role === "user";
-      return (
-        <View
-          style={[
-            styles.messageBubble,
-            isUser ? styles.userBubble : styles.assistantBubble,
-          ]}
-        >
-          {!isUser && (
-            <View style={styles.avatarContainer}>
-              <Ionicons name="hardware-chip" size={16} color={Colors.dark.tint} />
-            </View>
-          )}
-          <View
-            style={[
-              styles.bubbleContent,
-              isUser ? styles.userBubbleContent : styles.assistantBubbleContent,
-            ]}
-          >
-            <Text
-              style={[
-                styles.messageText,
-                isUser ? styles.userMessageText : styles.assistantMessageText,
-              ]}
-            >
-              {item.content}
-            </Text>
-          </View>
-        </View>
+      await sendTextMessage(cleaned);
+    } catch (e: any) {
+      addMessage(
+        "assistant",
+        `I can't reach the server right now.\nCheck API_BASE and /api/health.\n\nAPI_BASE: ${API_BASE}\nError: ${String(
+          e?.message || e,
+        )}`,
       );
-    },
-    []
-  );
+    } finally {
+      setIsProcessing(false);
+    }
+  }
 
-  const reversedMessages = [...messages].reverse();
+  async function onMicPress() {
+    if (isRecording) {
+      await stopRecordingAndSend();
+    } else {
+      await startRecording();
+    }
+  }
 
-  if (!fontsLoaded) return null;
+  async function checkDisclaimer() {
+    try {
+      const v = await AsyncStorage.getItem(STORAGE_DISCLAIMER_KEY);
+      if (v === "1") return;
+      setShowDisclaimer(true);
+    } catch {
+      // ignore
+    }
+  }
+
+  async function acceptDisclaimer() {
+    try {
+      await AsyncStorage.setItem(STORAGE_DISCLAIMER_KEY, "1");
+    } catch {
+      // ignore
+    }
+    setShowDisclaimer(false);
+  }
+
+  useEffect(() => {
+    checkMicPermission();
+    checkDisclaimer();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      stopAnyTTS();
+      try {
+        recordingRef.current = null;
+      } catch {
+        // ignore
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Wave animation while recording
+  useEffect(() => {
+    if (!isRecording) {
+      waveAnim.stopAnimation();
+      waveAnim.setValue(0);
+      return;
+    }
+
+    const loop = Animated.loop(
+      Animated.timing(waveAnim, {
+        toValue: 1,
+        duration: 850,
+        easing: Easing.inOut(Easing.quad),
+        useNativeDriver: true,
+      }),
+    );
+    loop.start();
+
+    return () => {
+      loop.stop();
+      waveAnim.setValue(0);
+    };
+  }, [isRecording, waveAnim]);
+
+  const waveScale = waveAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 1.35],
+  });
+
+  const waveOpacity = waveAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.35, 0.05],
+  });
+
+  const headerPauseIcon =
+    ttsStatus === "playing"
+      ? "pause"
+      : ttsStatus === "paused"
+        ? "play"
+        : "volume-high";
+
+  const onHeaderPausePress = async () => {
+    if (ttsStatus === "playing") return pauseTTS();
+    if (ttsStatus === "paused") return resumeTTS();
+
+    // play last assistant message
+    const last = [...messages].reverse().find((m) => m.role === "assistant");
+    if (last?.content) return playTTS(last.content);
+  };
 
   return (
-    <View style={[styles.container, { paddingTop: topInset }]}>
-      <View style={styles.header}>
-        <View style={styles.headerIcon}>
-          <Ionicons name="hardware-chip" size={20} color={Colors.dark.tint} />
-        </View>
-        <View>
-          <Text style={styles.headerTitle}>SAWWISE</Text>
-          <Text style={styles.headerSubtitle}>HYDMECH S-20 Expert</Text>
-        </View>
-      </View>
-
+    <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView
-        style={styles.flex1}
-        behavior="padding"
-        keyboardVerticalOffset={0}
+        style={styles.kav}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
       >
-        <FlatList
-          data={reversedMessages}
-          keyExtractor={(item) => item.id}
-          renderItem={renderMessage}
-          inverted={messages.length > 0}
-          contentContainerStyle={[
-            styles.messagesList,
-            messages.length === 0 && styles.emptyList,
-          ]}
-          keyboardDismissMode="interactive"
-          keyboardShouldPersistTaps="handled"
-          ListHeaderComponent={
-            isThinking ? (
-              <View style={styles.thinkingContainer}>
-                <View style={styles.thinkingBubble}>
-                  <ActivityIndicator size="small" color={Colors.dark.tint} />
-                  <Text style={styles.thinkingText}>Thinking...</Text>
-                </View>
-              </View>
-            ) : null
-          }
-          ListFooterComponent={
-            messages.length === 0 ? (
-              <View style={styles.emptyState}>
-                <View style={styles.emptyIcon}>
-                  <Ionicons name="chatbubbles-outline" size={40} color={Colors.dark.textMuted} />
-                </View>
-                <Text style={styles.emptyTitle}>Ask SAWWISE anything</Text>
-                <Text style={styles.emptySubtitle}>
-                  Type a question or tap the mic to talk about the HYDMECH S-20 Series III bandsaw.
+        <View style={[styles.container, { paddingTop: 18 }]}>
+          {showDisclaimer && (
+            <View style={styles.disclaimerOverlay}>
+              <View style={styles.disclaimerCard}>
+                <Text style={styles.disclaimerTitle}>Important</Text>
+                <Text style={styles.disclaimerText}>
+                  WeldWise is an AI-assisted tool for training and guidance. It
+                  does not replace qualified supervision, code requirements,
+                  inspections, or safe work procedures. Always follow your
+                  employer’s policies, local codes, and jobsite safety rules.
                 </Text>
-              </View>
-            ) : null
-          }
-        />
-
-        {ttsState !== "idle" && (
-          <View style={styles.ttsControls}>
-            <View style={styles.ttsBar}>
-              <Ionicons name="volume-high" size={18} color={Colors.dark.tint} />
-              <Text style={styles.ttsLabel}>
-                {ttsState === "playing" ? "Speaking..." : "Paused"}
-              </Text>
-              <View style={styles.ttsButtons}>
-                {ttsState === "playing" ? (
-                  <Pressable onPress={pauseTTS} style={styles.ttsButton}>
-                    <Ionicons name="pause" size={20} color={Colors.dark.text} />
-                  </Pressable>
-                ) : (
-                  <Pressable onPress={resumeTTS} style={styles.ttsButton}>
-                    <Ionicons name="play" size={20} color={Colors.dark.text} />
-                  </Pressable>
-                )}
-                <Pressable onPress={stopTTS} style={styles.ttsButton}>
-                  <Ionicons name="stop" size={20} color={Colors.dark.danger} />
+                <Pressable
+                  style={styles.disclaimerBtn}
+                  onPress={acceptDisclaimer}
+                >
+                  <Text style={styles.disclaimerBtnText}>I understand</Text>
                 </Pressable>
               </View>
             </View>
-          </View>
-        )}
-
-        <View style={[styles.inputArea, { paddingBottom: bottomInset + 90 }]}>
-          <View style={styles.inputRow}>
-            <Pressable
-              onPress={toggleRecording}
-              style={({ pressed }) => [
-                styles.micButton,
-                isRecording && styles.micButtonRecording,
-                pressed && { opacity: 0.7 },
-              ]}
-              disabled={isThinking}
-            >
-              <Ionicons
-                name={isRecording ? "stop" : "mic"}
-                size={22}
-                color={isRecording ? "#fff" : Colors.dark.tint}
-              />
-            </Pressable>
-
-            <View style={styles.inputContainer}>
-              <TextInput
-                ref={inputRef}
-                style={styles.textInput}
-                placeholder={isRecording ? "Recording..." : "Ask about the S-20..."}
-                placeholderTextColor={Colors.dark.textMuted}
-                value={inputText}
-                onChangeText={setInputText}
-                editable={!isRecording && !isThinking}
-                multiline
-                maxLength={2000}
-                blurOnSubmit={false}
-                onSubmitEditing={() => {
-                  if (inputText.trim()) {
-                    sendTextMessage(inputText);
-                    inputRef.current?.focus();
-                  }
-                }}
-              />
-            </View>
-
-            <Pressable
-              onPress={() => {
-                if (inputText.trim()) {
-                  sendTextMessage(inputText);
-                  inputRef.current?.focus();
-                }
-              }}
-              style={({ pressed }) => [
-                styles.sendButton,
-                !!inputText.trim() && styles.sendButtonActive,
-                pressed && { opacity: 0.7 },
-              ]}
-              disabled={!inputText.trim() || isThinking || isRecording}
-            >
-              <Ionicons
-                name="send"
-                size={20}
-                color={inputText.trim() ? "#fff" : Colors.dark.textMuted}
-              />
-            </Pressable>
-          </View>
-
-          {isRecording && (
-            <View style={styles.recordingIndicator}>
-              <View style={styles.recordingDot} />
-              <Text style={styles.recordingText}>Recording - tap mic to stop</Text>
-            </View>
           )}
+
+          <View style={styles.headerRow}>
+            <View style={styles.headerLeft}>
+              <Text style={styles.title}>Talk</Text>
+              <Text style={styles.subtitle}>
+                Tap the mic to start. Tap again to stop and send.
+              </Text>
+            </View>
+
+            <Pressable
+              onPress={onHeaderPausePress}
+              style={[
+                styles.headerPauseBtn,
+                ttsStatus === "playing" ? styles.headerPauseBtnOn : null,
+              ]}
+              disabled={ttsStatus === "loading"}
+            >
+              <Ionicons
+                name={headerPauseIcon as any}
+                size={22}
+                color="#E07A1F"
+              />
+            </Pressable>
+          </View>
+
+          <ScrollView
+            ref={(r) => (scrollRef.current = r)}
+            style={styles.scroll}
+            contentContainerStyle={[
+              styles.scrollContent,
+              { paddingBottom: scrollBottomPad },
+            ]}
+            onContentSizeChange={() =>
+              scrollRef.current?.scrollToEnd({ animated: true })
+            }
+            keyboardShouldPersistTaps="handled"
+          >
+            {messages.map((m) => (
+              <View
+                key={m.id}
+                style={[
+                  styles.bubble,
+                  m.role === "assistant"
+                    ? styles.bubbleAssistant
+                    : styles.bubbleUser,
+                ]}
+              >
+                <Text style={styles.bubbleText}>{m.content}</Text>
+              </View>
+            ))}
+
+            {isProcessing && (
+              <View style={[styles.bubble, styles.bubbleAssistant]}>
+                <ActivityIndicator />
+              </View>
+            )}
+
+            {micPermissionOk === false && (
+              <View style={styles.permissionBar}>
+                <Text style={styles.permissionText}>
+                  Mic permission is off. Enable it in iPhone Settings for
+                  WeldWise.
+                </Text>
+              </View>
+            )}
+          </ScrollView>
+
+          <View
+            style={[styles.inputBar, { paddingBottom: insets.bottom + 12 }]}
+          >
+            <View style={styles.micWrap}>
+              {isRecording && (
+                <Animated.View
+                  pointerEvents="none"
+                  style={[
+                    styles.waveRing,
+                    {
+                      opacity: waveOpacity,
+                      transform: [{ scale: waveScale }],
+                    },
+                  ]}
+                />
+              )}
+
+              <Pressable
+                onPress={onMicPress}
+                style={[styles.micBtn, isRecording ? styles.micBtnOn : null]}
+              >
+                <Ionicons
+                  name={(isRecording ? "stop" : "mic") as any}
+                  size={22}
+                  color="#fff"
+                />
+              </Pressable>
+            </View>
+
+            <TextInput
+              value={input}
+              onChangeText={setInput}
+              placeholder="Ask your mentor..."
+              placeholderTextColor="#8B8F98"
+              style={styles.textInput}
+              editable={!isProcessing}
+              multiline
+            />
+
+            <Pressable
+              onPress={() => sendTextMessage(input)}
+              style={[styles.sendBtn, isProcessing ? styles.btnDisabled : null]}
+              disabled={isProcessing}
+            >
+              <Text style={styles.sendText}>Send</Text>
+            </Pressable>
+          </View>
         </View>
       </KeyboardAvoidingView>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.dark.background,
-  },
-  flex1: {
-    flex: 1,
-  },
-  header: {
+  safe: { flex: 1, backgroundColor: "#0A0C10" },
+  kav: { flex: 1 },
+  container: { flex: 1, paddingHorizontal: 18 },
+
+  headerRow: {
     flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.dark.border,
-    gap: 12,
+    alignItems: "flex-start",
+    justifyContent: "space-between",
   },
-  headerIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.dark.surfaceLight,
+  headerLeft: { flex: 1, paddingRight: 12 },
+  title: {
+    color: "#FFFFFF",
+    fontSize: 52,
+    fontWeight: "800",
+    letterSpacing: -1,
+  },
+  subtitle: { color: "#8B8F98", fontSize: 18, marginTop: 6 },
+
+  headerPauseBtn: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 2,
+    borderColor: "rgba(224,122,31,0.65)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 6,
+  },
+  headerPauseBtnOn: {
+    borderColor: "rgba(224,122,31,0.95)",
+  },
+
+  scroll: { flex: 1, marginTop: 16 },
+  scrollContent: { paddingTop: 10, gap: 12 },
+
+  bubble: {
+    borderRadius: 22,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    maxWidth: "92%",
+  },
+  bubbleAssistant: { backgroundColor: "#1B1E25", alignSelf: "flex-start" },
+  bubbleUser: { backgroundColor: "#2B313D", alignSelf: "flex-end" },
+  bubbleText: { color: "#FFFFFF", fontSize: 18, lineHeight: 24 },
+
+  inputBar: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 10,
+    paddingHorizontal: 0,
+    paddingTop: 12,
+    paddingBottom: 18,
+    backgroundColor: "rgba(10,12,16,0.92)",
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "#222631",
+  },
+
+  micWrap: {
+    width: 52,
+    height: 52,
     alignItems: "center",
     justifyContent: "center",
   },
-  headerTitle: {
-    fontSize: 17,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.dark.text,
+  waveRing: {
+    position: "absolute",
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 2,
+    borderColor: "rgba(224,122,31,0.95)",
   },
-  headerSubtitle: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: Colors.dark.textSecondary,
-    marginTop: 1,
+  micBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#E07A1F",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  messagesList: {
+  micBtnOn: { backgroundColor: "#D64545" },
+
+  textInput: {
+    flex: 1,
+    minHeight: 48,
+    maxHeight: 120,
+    borderRadius: 24,
     paddingHorizontal: 16,
     paddingVertical: 12,
-  },
-  emptyList: {
-    flex: 1,
-    justifyContent: "center",
-  },
-  emptyState: {
-    alignItems: "center",
-    paddingHorizontal: 40,
-    paddingVertical: 40,
-  },
-  emptyIcon: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: Colors.dark.surfaceLight,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
-  },
-  emptyTitle: {
+    backgroundColor: "#13161D",
+    color: "#FFFFFF",
     fontSize: 18,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.dark.text,
-    marginBottom: 8,
-    textAlign: "center",
   },
-  emptySubtitle: {
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
-    color: Colors.dark.textSecondary,
-    textAlign: "center",
-    lineHeight: 20,
-  },
-  messageBubble: {
-    flexDirection: "row",
-    marginBottom: 12,
-    alignItems: "flex-end",
-    gap: 8,
-  },
-  userBubble: {
-    justifyContent: "flex-end",
-  },
-  assistantBubble: {
-    justifyContent: "flex-start",
-  },
-  avatarContainer: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: Colors.dark.surfaceLight,
+
+  sendBtn: {
+    height: 48,
+    paddingHorizontal: 18,
+    borderRadius: 24,
+    backgroundColor: "#E07A1F",
     alignItems: "center",
     justifyContent: "center",
   },
-  bubbleContent: {
-    maxWidth: "75%",
-    borderRadius: 18,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  userBubbleContent: {
-    backgroundColor: Colors.dark.userBubble,
-    borderBottomRightRadius: 4,
-    marginLeft: "auto",
-  },
-  assistantBubbleContent: {
-    backgroundColor: Colors.dark.assistantBubble,
-    borderBottomLeftRadius: 4,
-  },
-  messageText: {
-    fontSize: 15,
-    lineHeight: 22,
-    fontFamily: "Inter_400Regular",
-  },
-  userMessageText: {
-    color: "#fff",
-  },
-  assistantMessageText: {
-    color: Colors.dark.text,
-  },
-  thinkingContainer: {
-    marginBottom: 12,
-    alignItems: "flex-start",
-    paddingLeft: 36,
-  },
-  thinkingBubble: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: Colors.dark.assistantBubble,
-    borderRadius: 18,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    gap: 8,
-  },
-  thinkingText: {
-    fontSize: 14,
-    fontFamily: "Inter_500Medium",
-    color: Colors.dark.textSecondary,
-  },
-  ttsControls: {
-    paddingHorizontal: 16,
-    paddingBottom: 6,
-  },
-  ttsBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: Colors.dark.surface,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    gap: 10,
-  },
-  ttsLabel: {
-    flex: 1,
-    fontSize: 13,
-    fontFamily: "Inter_500Medium",
-    color: Colors.dark.textSecondary,
-  },
-  ttsButtons: {
-    flexDirection: "row",
-    gap: 6,
-  },
-  ttsButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.dark.surfaceLight,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  inputArea: {
-    borderTopWidth: 1,
-    borderTopColor: Colors.dark.border,
-    backgroundColor: Colors.dark.background,
-    paddingHorizontal: 12,
-    paddingTop: 10,
-  },
-  inputRow: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    gap: 8,
-  },
-  micButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: Colors.dark.surfaceLight,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  micButtonRecording: {
-    backgroundColor: Colors.dark.recording,
-  },
-  inputContainer: {
-    flex: 1,
-    backgroundColor: Colors.dark.inputBg,
-    borderRadius: 22,
+  btnDisabled: { opacity: 0.6 },
+  sendText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+
+  permissionBar: {
+    alignSelf: "stretch",
+    backgroundColor: "rgba(214,69,69,0.15)",
+    borderColor: "rgba(214,69,69,0.4)",
     borderWidth: 1,
-    borderColor: Colors.dark.border,
-    minHeight: 44,
-    maxHeight: 120,
+    padding: 10,
+    borderRadius: 14,
+    marginTop: 10,
+  },
+  permissionText: { color: "#FFFFFF", fontSize: 14 },
+
+  disclaimerOverlay: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    alignItems: "center",
     justifyContent: "center",
+    zIndex: 999,
+    paddingHorizontal: 18,
   },
-  textInput: {
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 10,
-    fontSize: 15,
-    fontFamily: "Inter_400Regular",
-    color: Colors.dark.text,
-    maxHeight: 110,
+  disclaimerCard: {
+    width: "100%",
+    backgroundColor: "#141823",
+    borderRadius: 18,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: "#2A3140",
   },
-  sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: Colors.dark.surfaceLight,
+  disclaimerTitle: {
+    color: "#FFFFFF",
+    fontSize: 20,
+    fontWeight: "800",
+    marginBottom: 8,
+  },
+  disclaimerText: { color: "#D5D7DB", fontSize: 16, lineHeight: 22 },
+  disclaimerBtn: {
+    marginTop: 14,
+    backgroundColor: "#E07A1F",
+    borderRadius: 14,
+    paddingVertical: 12,
     alignItems: "center",
     justifyContent: "center",
   },
-  sendButtonActive: {
-    backgroundColor: Colors.dark.tint,
-  },
-  recordingIndicator: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingTop: 8,
-    gap: 8,
-  },
-  recordingDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.dark.recording,
-  },
-  recordingText: {
-    fontSize: 13,
-    fontFamily: "Inter_500Medium",
-    color: Colors.dark.recording,
-  },
+  disclaimerBtnText: { color: "#FFFFFF", fontSize: 16, fontWeight: "800" },
 });

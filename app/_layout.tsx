@@ -1,38 +1,38 @@
-// template
-import { QueryClientProvider } from "@tanstack/react-query";
+// app/_layout.tsx
+import React, { useEffect, useState } from "react";
 import { Stack } from "expo-router";
-import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect } from "react";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { KeyboardProvider } from "react-native-keyboard-controller";
-import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { queryClient } from "@/lib/query-client";
-
-// Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
-
-function RootLayoutNav() {
-  return (
-    <Stack screenOptions={{ headerBackTitle: "Back" }}>
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-    </Stack>
-  );
-}
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import DisclaimerModal from "../components/DisclaimerModal";
 
 export default function RootLayout() {
+  const [showDisclaimer, setShowDisclaimer] = useState(false);
+
   useEffect(() => {
-    SplashScreen.hideAsync();
+    const checkDisclaimer = async () => {
+      const accepted = await AsyncStorage.getItem("disclaimerAccepted");
+      if (!accepted) {
+        setShowDisclaimer(true);
+      }
+    };
+
+    checkDisclaimer();
   }, []);
 
+  const handleAcceptDisclaimer = async () => {
+    await AsyncStorage.setItem("disclaimerAccepted", "true");
+    setShowDisclaimer(false);
+  };
+
   return (
-    <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <GestureHandlerRootView>
-          <KeyboardProvider>
-            <RootLayoutNav />
-          </KeyboardProvider>
-        </GestureHandlerRootView>
-      </QueryClientProvider>
-    </ErrorBoundary>
+    <>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" />
+      </Stack>
+
+      <DisclaimerModal
+        visible={showDisclaimer}
+        onAccept={handleAcceptDisclaimer}
+      />
+    </>
   );
 }

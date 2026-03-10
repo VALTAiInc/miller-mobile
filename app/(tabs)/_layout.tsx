@@ -1,59 +1,56 @@
-import { isLiquidGlassAvailable } from "expo-glass-effect";
-import { Tabs } from "expo-router";
-import { NativeTabs, Icon, Label } from "expo-router/unstable-native-tabs";
-import { BlurView } from "expo-blur";
-import { Platform, StyleSheet } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+// app/(tabs)/_layout.tsx
 import React from "react";
+import { Tabs } from "expo-router";
+import { Platform } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
-import Colors from "../../constants/colors";
+const ACCENT = "#fe7725";
 
-function NativeTabLayout() {
-  return (
-    <NativeTabs>
-      <NativeTabs.Trigger name="index">
-        <Icon sf={{ default: "house", selected: "house.fill" }} />
-        <Label>Home</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="talk">
-        <Icon sf={{ default: "mic", selected: "mic.fill" }} />
-        <Label>Talk</Label>
-      </NativeTabs.Trigger>
-    </NativeTabs>
-  );
-}
+export default function TabLayout() {
+  const insets = useSafeAreaInsets();
 
-function ClassicTabLayout() {
+  // iPhone safe area can be small on some sims; force a minimum.
+  const bottomPad = Math.max(insets.bottom, 14);
+
+  // Base bar height before adding safe-area padding.
+  const TAB_HEIGHT = 62;
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: Colors.dark.tabIconSelected,
-        tabBarInactiveTintColor: Colors.dark.tabIconDefault,
+
+        tabBarActiveTintColor: ACCENT,
+        tabBarInactiveTintColor: "#6b6b6b",
+
         tabBarStyle: {
-          position: "absolute" as const,
-          backgroundColor: Platform.select({
-            ios: "transparent",
-            android: Colors.dark.tabBar,
-            default: Colors.dark.tabBar,
-          }),
-          borderTopWidth: 0,
-          elevation: 0,
-          height: Platform.OS === "web" ? 84 : 85,
-          paddingBottom: Platform.OS === "web" ? 34 : 28,
-          paddingTop: 8,
+          backgroundColor: "#000",
+          borderTopColor: "#141414",
+          borderTopWidth: 1,
+
+          // IMPORTANT: push content UP (less top padding) + give more bottom room
+          height: TAB_HEIGHT + bottomPad + 26,
+          paddingTop: 2,
+          paddingBottom: bottomPad + 20,
         },
-        tabBarBackground: () =>
-          Platform.OS === "ios" ? (
-            <BlurView
-              intensity={90}
-              tint="dark"
-              style={StyleSheet.absoluteFill}
-            />
-          ) : null,
+
+        // Give each tab item its own vertical breathing room (prevents label clipping)
+        tabBarItemStyle: {
+          paddingTop: 2,
+          paddingBottom: 8,
+        },
+
+        // Slightly tighter label spacing so it sits safely above the bottom padding
         tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: "600" as const,
+          fontSize: 12,
+          marginTop: 2,
+          paddingBottom: Platform.OS === "ios" ? 0 : 2,
+        },
+
+        // Helps keep icon from drifting too low on some devices
+        tabBarIconStyle: {
+          marginTop: 0,
         },
       }}
     >
@@ -62,26 +59,70 @@ function ClassicTabLayout() {
         options={{
           title: "Home",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" size={size} color={color} />
+            <Ionicons
+              name="home-outline"
+              size={Math.min(size, 24)}
+              color={color}
+            />
           ),
         }}
       />
+
       <Tabs.Screen
         name="talk"
         options={{
           title: "Talk",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="mic" size={size} color={color} />
+            <Ionicons
+              name="mic-outline"
+              size={Math.min(size, 24)}
+              color={color}
+            />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="manual"
+        options={{
+          title: "Procedures",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons
+              name="document-text-outline"
+              size={Math.min(size, 24)}
+              color={color}
+            />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="maintenance-log"
+        options={{
+          title: "Job Log",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons
+              name="construct-outline"
+              size={Math.min(size, 24)}
+              color={color}
+            />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="blueprints"
+        options={{
+          title: "Blueprints",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons
+              name="grid-outline"
+              size={Math.min(size, 24)}
+              color={color}
+            />
           ),
         }}
       />
     </Tabs>
   );
-}
-
-export default function TabLayout() {
-  if (isLiquidGlassAvailable()) {
-    return <NativeTabLayout />;
-  }
-  return <ClassicTabLayout />;
 }

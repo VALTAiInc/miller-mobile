@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "VALT",
-    "slug": "valt",
+    "name": "Continuum Systems",
+    "slug": "continuum-systems",
     "version": "1.0.1",
     "orientation": "default",
     "icon": "./assets/images/VALT_1024x1024_V2.png",
-    "scheme": "weldwise",
+    "scheme": "continuum-systems",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.thevalt.weldwise",
+      "bundleIdentifier": "com.miller.continuum-systems",
       "buildNumber": "5",
       "icon": "./assets/images/VALT_1024x1024_V2.png",
       "infoPlist": {
@@ -23,7 +23,7 @@
       }
     },
     "android": {
-      "package": "com.thevalt.weldwise",
+      "package": "com.miller.continuumsystems",
       "versionCode": 5,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/VALT_1024x1024_V2.png",
