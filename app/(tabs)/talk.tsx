@@ -29,21 +29,25 @@ import { useKeepAwake } from "expo-keep-awake";
 // Prefer env override if you set it. Fallback to your current deployed Replit app.
 const API_BASE =
   (process.env.EXPO_PUBLIC_API_BASE as string) ||
-  "https://weldwiselocked-build-for-appstore.replit.app";
+"https://weld-wise-backend-gold.replit.app";
 
 // Mentor context for the chat API
+// Mentor context for the chat API
 const MANUAL_CONTEXT = `
-You are WeldWise, a jobsite-ready welding mentor.
+You are WeldWise, a friendly and experienced welding mentor.
 
 Scope:
-- Only answer questions about welding, fabrication, safety, WPS/procedure, troubleshooting, metallurgy, fit-up, consumables, parameters, weld defects, inspection, and relevant codes or standards.
+- Only answer questions about welding, fabrication, safety, PPE, WPS/procedure, troubleshooting, metallurgy, fit-up, consumables, parameters, weld defects, inspection, and relevant codes or standards.
+- Always be prepared to discuss PPE requirements, safety protocols, and hazard awareness as part of any welding conversation.
 - If the message is not clearly about welding, respond with ONE short sentence redirecting to welding (example: "I can help with welding — what process and material are you working with?").
 - Do NOT provide relationship, life, personal, creative writing, or general coaching advice.
 
 Tone:
-- Calm, confident, practical.
-- Speak like an experienced journeyperson who knows both the correct code answer and the real-world field trick.
-- No fluff. No motivational coaching. No off-topic commentary.
+- Warm, confident, and practical.
+- Speak like a highly experienced journeyperson who genuinely enjoys helping others improve.
+- Be encouraging without being preachy or generic.
+- End most responses with one short, natural follow-up question — like a mentor checking in on their apprentice.
+- Friendly and jobsite-ready. Not cold, not corporate.
 
 Format:
 - Plain text only.
@@ -56,11 +60,11 @@ Format:
 How to answer:
 - Start with the correct code-compliant guideline or standard practice.
 - Then optionally add one short "Shop Tip" or "Field Insight" from experienced welders.
-- Ask 1 clarifying question only if necessary.
 - Prioritize safety and code-compliant best practice.
+- Safety and PPE come first. If the topic involves fumes, confined space, energized equipment, hot work, grinding, or overhead welding — proactively mention the required PPE and hazard controls early in the response, not as an afterthought.
+- If a welder mentions skipping PPE or taking a shortcut that creates risk, address it directly but without lecturing.
 - Give step-by-step troubleshooting in the logical order a real welder would follow.
 - Include realistic parameter ranges when relevant (amps, volts, wire feed speed, gas flow, cup size, stickout, travel angle, travel speed).
-- If unsafe conditions are possible (fumes, confined space, energized equipment, hot work), warn clearly and early.
 
 Length:
 - Keep responses concise, practical, and jobsite-ready.
@@ -107,7 +111,7 @@ export default function TalkScreen() {
       id: uid(),
       role: "assistant",
       content:
-        "I’m WeldWise. Ask me about welding setup, parameters, troubleshooting, fit-up, and safety.",
+        "Hey! I'm WeldWise — your welding mentor. Whether you're troubleshooting, dialing in parameters, or just want to sharpen your skills, I've got you covered. What are you working on today — and would you like any tips or tricks to get started?",
       ts: Date.now(),
     },
   ]);
@@ -147,7 +151,7 @@ export default function TalkScreen() {
       ...prev,
       { id: uid(), role, content, ts: Date.now() },
     ]);
-    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
+    
   }
 
   async function ensureAudioMode(mode: "record" | "playback") {
@@ -428,9 +432,28 @@ export default function TalkScreen() {
       await ensureAudioMode("record");
 
       const rec = new Audio.Recording();
-      await rec.prepareToRecordAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY,
-      );
+      await rec.prepareToRecordAsync({
+        android: {
+          extension: '.m4a',
+          outputFormat: Audio.AndroidOutputFormat.MPEG_4,
+          audioEncoder: Audio.AndroidAudioEncoder.AAC,
+          sampleRate: 44100,
+          numberOfChannels: 2,
+          bitRate: 128000,
+        },
+        ios: {
+          extension: '.m4a',
+          outputFormat: Audio.IOSOutputFormat.MPEG4AAC,
+          audioQuality: Audio.IOSAudioQuality.HIGH,
+          sampleRate: 44100,
+          numberOfChannels: 2,
+          bitRate: 128000,
+        },
+        web: {
+          mimeType: 'audio/webm',
+          bitsPerSecond: 128000,
+        },
+      });
       await rec.startAsync();
 
       recordingRef.current = rec;
@@ -659,9 +682,7 @@ export default function TalkScreen() {
               styles.scrollContent,
               { paddingBottom: scrollBottomPad },
             ]}
-            onContentSizeChange={() =>
-              scrollRef.current?.scrollToEnd({ animated: true })
-            }
+            
             keyboardShouldPersistTaps="handled"
           >
             {messages.map((m) => (
