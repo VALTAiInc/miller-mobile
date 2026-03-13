@@ -275,7 +275,7 @@ function TranslatorModal({ visible, onClose }: { visible: boolean; onClose: () =
               onPressOut={() => stopAndTranslate("B")}
               color={Colors.primary}
             />
-            <Pressable onPress={onClose} style={tStyles.closeButton}>
+            <Pressable onPress={onClose} style={tStyles.micRowDone}>
               <Text style={tStyles.closeButtonText}>Done</Text>
             </Pressable>
           </View>
@@ -316,7 +316,7 @@ function TranslatorModal({ visible, onClose }: { visible: boolean; onClose: () =
               onPressOut={() => stopAndTranslate("A")}
               color="#4ECDC4"
             />
-            <Pressable onPress={onClose} style={tStyles.closeButton}>
+            <Pressable onPress={onClose} style={tStyles.micRowDone}>
               <Text style={tStyles.closeButtonText}>Done</Text>
             </Pressable>
           </View>
@@ -578,10 +578,16 @@ const tStyles = StyleSheet.create({
   },
 
   micRow: {
-    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 16,
+  },
+  micRowDone: {
+    position: "absolute",
+    right: 0,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 16,
   },
   micOuter: { alignItems: "center", justifyContent: "center", height: 80 },
   micPulse: {
