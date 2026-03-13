@@ -204,6 +204,7 @@ function TranslatorModal({ visible, onClose }: { visible: boolean; onClose: () =
       }
 
       const result = await response.json();
+      console.log('API result:', JSON.stringify(result));
 
       if (speaker === "A") {
         setATranscript(result.transcript);
