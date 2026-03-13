@@ -272,7 +272,7 @@ function TranslatorModal({ visible, onClose }: { visible: boolean; onClose: () =
                 <Text style={tStyles.transcriptText}>{bTranscript}</Text>
                 <View style={[tStyles.dividerLine, { backgroundColor: Colors.primary }]} />
                 <Text style={tStyles.translationLabel}>→ {getLang(langA).flag} {getLang(langA).label}</Text>
-                <Text style={tStyles.translationText}>{bTranslation}</Text>
+                <Text style={tStyles.translationText}>{aTranslation}</Text>
               </>
             ) : (
               <Text style={tStyles.placeholder}>Hold mic to speak</Text>
@@ -313,7 +313,7 @@ function TranslatorModal({ visible, onClose }: { visible: boolean; onClose: () =
                 <Text style={tStyles.transcriptText}>{aTranscript}</Text>
                 <View style={[tStyles.dividerLine, { backgroundColor: "#4ECDC4" }]} />
                 <Text style={tStyles.translationLabel}>→ {getLang(langB).flag} {getLang(langB).label}</Text>
-                <Text style={tStyles.translationText}>{aTranslation}</Text>
+                <Text style={tStyles.translationText}>{bTranslation}</Text>
               </>
             ) : (
               <Text style={tStyles.placeholder}>Hold mic to speak</Text>
