@@ -284,33 +284,35 @@ function TranslatorModal({ visible, onClose }: { visible: boolean; onClose: () =
         </View>
 
         {/* Person B */}
-        <View style={[tStyles.panel, { transform: [{ rotate: "180deg" }] }]}>
-          <View style={tStyles.panelHeader}>
-            <View style={[tStyles.speakerBadge, { backgroundColor: Colors.primary }]}>
-              <Text style={tStyles.speakerBadgeText}>B</Text>
+        <View style={{ flex: 1, transform: [{ rotate: "180deg" }] }}>
+          <View style={tStyles.panel}>
+            <View style={tStyles.panelHeader}>
+              <View style={[tStyles.speakerBadge, { backgroundColor: Colors.primary }]}>
+                <Text style={tStyles.speakerBadgeText}>B</Text>
+              </View>
+              <LangPicker value={langB} onChange={setLangB} />
             </View>
-            <LangPicker value={langB} onChange={setLangB} />
+            <View style={tStyles.textBox}>
+              {bTranscript ? (
+                <>
+                  <Text style={tStyles.transcriptLabel}>Said</Text>
+                  <Text style={tStyles.transcriptText}>{bTranscript}</Text>
+                  <View style={[tStyles.dividerLine, { backgroundColor: Colors.primary }]} />
+                  <Text style={tStyles.translationLabel}>→ {getLang(langA).flag} {getLang(langA).label}</Text>
+                  <Text style={tStyles.translationText}>{bTranslation}</Text>
+                </>
+              ) : (
+                <Text style={tStyles.placeholder}>Hold mic to speak</Text>
+              )}
+            </View>
+            <MicButton
+              isRecording={bRecording}
+              isProcessing={bProcessing}
+              onPressIn={() => startRecording("B")}
+              onPressOut={() => stopAndTranslate("B")}
+              color={Colors.primary}
+            />
           </View>
-          <View style={tStyles.textBox}>
-            {bTranscript ? (
-              <>
-                <Text style={tStyles.transcriptLabel}>Said</Text>
-                <Text style={tStyles.transcriptText}>{bTranscript}</Text>
-                <View style={[tStyles.dividerLine, { backgroundColor: Colors.primary }]} />
-                <Text style={tStyles.translationLabel}>→ {getLang(langA).flag} {getLang(langA).label}</Text>
-                <Text style={tStyles.translationText}>{bTranslation}</Text>
-              </>
-            ) : (
-              <Text style={tStyles.placeholder}>Hold mic to speak</Text>
-            )}
-          </View>
-          <MicButton
-            isRecording={bRecording}
-            isProcessing={bProcessing}
-            onPressIn={() => startRecording("B")}
-            onPressOut={() => stopAndTranslate("B")}
-            color={Colors.primary}
-          />
         </View>
 
       </SafeAreaView>
