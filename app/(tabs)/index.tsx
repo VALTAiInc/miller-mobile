@@ -92,55 +92,31 @@ function LangPicker({ value, onChange }: { value: string; onChange: (c: string) 
   );
 }
 
-// ─── Mic Button ───────────────────────────────────────────────────────────────
+// ─── Talk Button ──────────────────────────────────────────────────────────────
 
-function MicButton({
+function TalkButton({
   isRecording, isProcessing, onPress, color,
 }: {
   isRecording: boolean; isProcessing: boolean;
   onPress: () => void; color: string;
 }) {
-  const scale = useRef(new Animated.Value(1)).current;
-  const pulse = useRef(new Animated.Value(1)).current;
-
-  React.useEffect(() => {
-    if (isRecording) {
-      Animated.spring(scale, { toValue: 0.93, useNativeDriver: true }).start();
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulse, { toValue: 1.2, duration: 600, useNativeDriver: true }),
-          Animated.timing(pulse, { toValue: 1.0, duration: 600, useNativeDriver: true }),
-        ])
-      ).start();
-    } else {
-      Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start();
-      pulse.stopAnimation();
-      Animated.timing(pulse, { toValue: 1, duration: 150, useNativeDriver: true }).start();
-    }
-  }, [isRecording]);
-
   return (
-    <View style={tStyles.micOuter}>
-      {isRecording && (
-        <Animated.View style={[tStyles.micPulse, { borderColor: color, transform: [{ scale: pulse }] }]} />
-      )}
-      <Animated.View style={{ transform: [{ scale }] }}>
-        <Pressable
-          onPress={onPress}
-          disabled={isProcessing}
-          style={[
-            tStyles.micButton,
-            { backgroundColor: isRecording ? color : "rgba(255,255,255,0.1)" },
-            isProcessing && { opacity: 0.5 },
-          ]}
-        >
-          {isProcessing
-            ? <ActivityIndicator size="large" color="#fff" />
-            : <Text style={{ fontSize: 26 }}>{isRecording ? "⏹" : "🎤"}</Text>
-          }
-        </Pressable>
-      </Animated.View>
-    </View>
+    <Pressable
+      onPress={onPress}
+      disabled={isProcessing}
+      style={[
+        tStyles.talkButton,
+        { borderColor: isRecording ? color : "rgba(255,255,255,0.2)", backgroundColor: isRecording ? color : "rgba(255,255,255,0.06)" },
+        isProcessing && { opacity: 0.5 },
+      ]}
+    >
+      {isProcessing
+        ? <ActivityIndicator size="small" color="#fff" />
+        : <Text style={[tStyles.talkButtonText, { color: isRecording ? "#fff" : "rgba(255,255,255,0.75)" }]}>
+            {isRecording ? "Push to Send" : "Push to Talk"}
+          </Text>
+      }
+    </Pressable>
   );
 }
 
@@ -277,20 +253,28 @@ function TranslatorModal({ visible, onClose }: { visible: boolean; onClose: () =
             <LangPicker value={langB} onChange={setLangB} />
           </View>
           <View style={tStyles.textBox}>
-            {bTranscript ? (
+            {bTranscript || bTranslation ? (
               <>
-                <Text style={tStyles.transcriptLabel}>Said</Text>
-                <Text style={tStyles.transcriptText}>{bTranscript}</Text>
-                <View style={[tStyles.dividerLine, { backgroundColor: Colors.primary }]} />
-                <Text style={tStyles.translationLabel}>→ {getLang(langA).flag} {getLang(langA).label}</Text>
-                <Text style={tStyles.translationText}>{aTranslation}</Text>
+                {bTranscript ? (
+                  <>
+                    <Text style={tStyles.transcriptLabel}>Said</Text>
+                    <Text style={tStyles.transcriptText}>{bTranscript}</Text>
+                    {bTranslation ? <View style={[tStyles.dividerLine, { backgroundColor: Colors.primary }]} /> : null}
+                  </>
+                ) : null}
+                {bTranslation ? (
+                  <>
+                    <Text style={tStyles.translationLabel}>→ {getLang(langB).flag} {getLang(langB).label}</Text>
+                    <Text style={tStyles.translationText}>{bTranslation}</Text>
+                  </>
+                ) : null}
               </>
             ) : (
-              <Text style={tStyles.placeholder}>Hold mic to speak</Text>
+              <Text style={tStyles.placeholder}>Push to Talk</Text>
             )}
           </View>
           <View style={tStyles.micRow}>
-            <MicButton
+            <TalkButton
               isRecording={bRecording}
               isProcessing={bProcessing}
               onPress={() => toggleRecording("B")}
@@ -317,20 +301,28 @@ function TranslatorModal({ visible, onClose }: { visible: boolean; onClose: () =
             <LangPicker value={langA} onChange={setLangA} />
           </View>
           <View style={tStyles.textBox}>
-            {aTranscript ? (
+            {aTranscript || aTranslation ? (
               <>
-                <Text style={tStyles.transcriptLabel}>Said</Text>
-                <Text style={tStyles.transcriptText}>{aTranscript}</Text>
-                <View style={[tStyles.dividerLine, { backgroundColor: "#4ECDC4" }]} />
-                <Text style={tStyles.translationLabel}>→ {getLang(langB).flag} {getLang(langB).label}</Text>
-                <Text style={tStyles.translationText}>{bTranslation}</Text>
+                {aTranscript ? (
+                  <>
+                    <Text style={tStyles.transcriptLabel}>Said</Text>
+                    <Text style={tStyles.transcriptText}>{aTranscript}</Text>
+                    {aTranslation ? <View style={[tStyles.dividerLine, { backgroundColor: "#4ECDC4" }]} /> : null}
+                  </>
+                ) : null}
+                {aTranslation ? (
+                  <>
+                    <Text style={tStyles.translationLabel}>→ {getLang(langA).flag} {getLang(langA).label}</Text>
+                    <Text style={tStyles.translationText}>{aTranslation}</Text>
+                  </>
+                ) : null}
               </>
             ) : (
-              <Text style={tStyles.placeholder}>Hold mic to speak</Text>
+              <Text style={tStyles.placeholder}>Push to Talk</Text>
             )}
           </View>
           <View style={tStyles.micRow}>
-            <MicButton
+            <TalkButton
               isRecording={aRecording}
               isProcessing={aProcessing}
               onPress={() => toggleRecording("A")}
@@ -601,6 +593,20 @@ const tStyles = StyleSheet.create({
   micRow: {
     alignItems: "center",
     justifyContent: "center",
+  },
+  talkButton: {
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 30,
+    borderWidth: 1.5,
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: 160,
+  },
+  talkButtonText: {
+    fontSize: 15,
+    fontWeight: "700",
+    letterSpacing: 0.5,
   },
   micRowDone: {
     position: "absolute",
