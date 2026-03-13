@@ -583,7 +583,7 @@ const tStyles = StyleSheet.create({
   },
   micRowDone: {
     position: "absolute",
-    right: 0,
+    right: "15%",
     backgroundColor: Colors.primary,
     paddingHorizontal: 16,
     paddingVertical: 8,
