@@ -41,6 +41,7 @@ const LANGUAGES = [
   { code: "ko", label: "한국어",      flag: "🇰🇷" },
   { code: "ar", label: "العربية",    flag: "🇸🇦" },
   { code: "hi", label: "हिंदी",       flag: "🇮🇳" },
+  { code: "fil", label: "Filipino",  flag: "🇵🇭" },
 ];
 
 function getLang(code: string) {
