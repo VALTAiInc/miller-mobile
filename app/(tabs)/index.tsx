@@ -251,17 +251,8 @@ function TranslatorModal({ visible, onClose }: { visible: boolean; onClose: () =
 
         {/* ── Person B — top of screen, rotated 180° for the person across the table ── */}
         <View style={[tStyles.panel, tStyles.panelB]}>
-          {/* In JSX this header is "first" = visual top after rotation = far from B ✓ */}
           <View style={tStyles.panelHeader}>
-            <View style={tStyles.speakerRow}>
-              <View style={[tStyles.speakerBadge, { backgroundColor: Colors.primary }]}>
-                <Text style={tStyles.speakerBadgeText}>B</Text>
-              </View>
-              <LangPicker value={langB} onChange={setLangB} />
-            </View>
-            <Pressable onPress={onClose} style={tStyles.closeButton}>
-              <Text style={tStyles.closeButtonText}>Done</Text>
-            </Pressable>
+            <LangPicker value={langB} onChange={setLangB} />
           </View>
           <View style={tStyles.textBox}>
             {bTranscript ? (
@@ -276,14 +267,18 @@ function TranslatorModal({ visible, onClose }: { visible: boolean; onClose: () =
               <Text style={tStyles.placeholder}>Hold mic to speak</Text>
             )}
           </View>
-          {/* In JSX this mic is "last" = visual bottom after rotation = closest to B's edge ✓ */}
-          <MicButton
-            isRecording={bRecording}
-            isProcessing={bProcessing}
-            onPressIn={() => startRecording("B")}
-            onPressOut={() => stopAndTranslate("B")}
-            color={Colors.primary}
-          />
+          <View style={tStyles.micRow}>
+            <MicButton
+              isRecording={bRecording}
+              isProcessing={bProcessing}
+              onPressIn={() => startRecording("B")}
+              onPressOut={() => stopAndTranslate("B")}
+              color={Colors.primary}
+            />
+            <Pressable onPress={onClose} style={tStyles.closeButton}>
+              <Text style={tStyles.closeButtonText}>Done</Text>
+            </Pressable>
+          </View>
         </View>
 
         {/* ── Center divider ── */}
@@ -297,17 +292,8 @@ function TranslatorModal({ visible, onClose }: { visible: boolean; onClose: () =
 
         {/* ── Person A — bottom of screen, normal orientation ── */}
         <View style={tStyles.panel}>
-          {/* Header is "first" = top of A's panel = far from A's edge ✓ */}
           <View style={tStyles.panelHeader}>
-            <View style={tStyles.speakerRow}>
-              <View style={[tStyles.speakerBadge, { backgroundColor: "#4ECDC4" }]}>
-                <Text style={tStyles.speakerBadgeText}>A</Text>
-              </View>
-              <LangPicker value={langA} onChange={setLangA} />
-            </View>
-            <Pressable onPress={onClose} style={tStyles.closeButton}>
-              <Text style={tStyles.closeButtonText}>Done</Text>
-            </Pressable>
+            <LangPicker value={langA} onChange={setLangA} />
           </View>
           <View style={tStyles.textBox}>
             {aTranscript ? (
@@ -322,14 +308,18 @@ function TranslatorModal({ visible, onClose }: { visible: boolean; onClose: () =
               <Text style={tStyles.placeholder}>Hold mic to speak</Text>
             )}
           </View>
-          {/* Mic is "last" = bottom of A's panel = closest to A's edge ✓ */}
-          <MicButton
-            isRecording={aRecording}
-            isProcessing={aProcessing}
-            onPressIn={() => startRecording("A")}
-            onPressOut={() => stopAndTranslate("A")}
-            color="#4ECDC4"
-          />
+          <View style={tStyles.micRow}>
+            <MicButton
+              isRecording={aRecording}
+              isProcessing={aProcessing}
+              onPressIn={() => startRecording("A")}
+              onPressOut={() => stopAndTranslate("A")}
+              color="#4ECDC4"
+            />
+            <Pressable onPress={onClose} style={tStyles.closeButton}>
+              <Text style={tStyles.closeButtonText}>Done</Text>
+            </Pressable>
+          </View>
         </View>
 
       </SafeAreaView>
@@ -587,6 +577,12 @@ const tStyles = StyleSheet.create({
     fontStyle: "italic",
   },
 
+  micRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 16,
+  },
   micOuter: { alignItems: "center", justifyContent: "center", height: 80 },
   micPulse: {
     position: "absolute",
