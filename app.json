@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/valt_spash_image.png",
+      "image": "./assets/images/hero.png",
       "resizeMode": "cover",
       "backgroundColor": "#0A0C10"
     },
