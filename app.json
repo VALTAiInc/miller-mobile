@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.thevalt.miller",
+      "bundleIdentifier": "com.miller.continuum-systems",
       "buildNumber": "16",
       "icon": "./assets/images/VALT_1024x1024_V4.png",
       "infoPlist": {
