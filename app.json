@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Miller Continuum",
-    "slug": "miller-continuum",
+    "slug": "valt",
     "version": "1.12.0",
     "orientation": "default",
     "icon": "./assets/images/VALT_1024x1024_V4.png",
@@ -54,6 +54,7 @@
       "eas": {
         "projectId": "abe7e45a-fe56-46b8-afcf-ceb472f6483c"
       }
-    }
+    },
+    "owner": "thevalt"
   }
 }
