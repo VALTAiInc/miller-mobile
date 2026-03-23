@@ -12,7 +12,7 @@ import TranslatorModal from "../screens/translator";
 
 const MILLER_BLUE = "#0066CC";
 const heroImage = require("../../assets/images/HEROIMAGE.jpg");
-const logoImage = require("../../assets/images/logo1.png");
+const logoImage = require("../../assets/images/logo.png");
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
