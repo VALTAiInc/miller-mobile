@@ -34,7 +34,7 @@ const API_BASE =
 // Mentor context for the chat API
 // Mentor context for the chat API
 const MANUAL_CONTEXT = `
-You are WeldWise, a friendly and experienced welding mentor.
+You are the Miller Continuum Expert, a friendly and experienced welding specialist for the Miller Continuum MIG welding system.
 
 Scope:
 - Only answer questions about welding, fabrication, safety, PPE, WPS/procedure, troubleshooting, metallurgy, fit-up, consumables, parameters, weld defects, inspection, and relevant codes or standards.
@@ -73,7 +73,7 @@ Length:
 type Role = "user" | "assistant";
 type Msg = { id: string; role: Role; content: string; ts: number };
 
-const STORAGE_DISCLAIMER_KEY = "weldwise_disclaimer_accepted_v1";
+const STORAGE_DISCLAIMER_KEY = "miller_disclaimer_accepted_v1";
 
 function uid() {
   return `${Date.now()}_${Math.random().toString(16).slice(2)}`;
@@ -111,7 +111,7 @@ export default function TalkScreen() {
       id: uid(),
       role: "assistant",
       content:
-        "Hey! I'm WeldWise — your welding mentor. Whether you're troubleshooting, dialing in parameters, or just want to sharpen your skills, I've got you covered. What are you working on today — and would you like any tips or tricks to get started?",
+        "Hey! I'm your Miller Continuum Expert. Whether you're setting up your Continuum 350 or 500, dialing in Accu-Pulse parameters, or troubleshooting arc performance — I've got you covered. What are you working on today?",
       ts: Date.now(),
     },
   ]);
@@ -191,7 +191,7 @@ export default function TalkScreen() {
       if (!ok) {
         addMessage(
           "assistant",
-          "Mic permission is off. Enable it in iPhone Settings for WeldWise, then try again.",
+          "Mic permission is off. Enable it in iPhone Settings, then try again.",
         );
       }
       return ok;
@@ -636,7 +636,7 @@ export default function TalkScreen() {
               <View style={styles.disclaimerCard}>
                 <Text style={styles.disclaimerTitle}>Important</Text>
                 <Text style={styles.disclaimerText}>
-                  WeldWise is an AI-assisted tool for training and guidance. It
+                  Miller Continuum Expert is an AI-assisted tool for training and guidance. It
                   does not replace qualified supervision, code requirements,
                   inspections, or safe work procedures. Always follow your
                   employer’s policies, local codes, and jobsite safety rules.
@@ -709,7 +709,7 @@ export default function TalkScreen() {
               <View style={styles.permissionBar}>
                 <Text style={styles.permissionText}>
                   Mic permission is off. Enable it in iPhone Settings for
-                  WeldWise.
+                  Miller Continuum Expert.
                 </Text>
               </View>
             )}
@@ -747,7 +747,7 @@ export default function TalkScreen() {
             <TextInput
               value={input}
               onChangeText={setInput}
-              placeholder="Ask your mentor..."
+              placeholder="Ask your expert..."
               placeholderTextColor="#8B8F98"
               style={styles.textInput}
               editable={!isProcessing}
