@@ -792,13 +792,13 @@ const styles = StyleSheet.create({
     height: 52,
     borderRadius: 26,
     borderWidth: 2,
-    borderColor: "rgba(224,122,31,0.65)",
+    borderColor: "rgba(255,255,255,0.65)",
     alignItems: "center",
     justifyContent: "center",
     marginTop: 6,
   },
   headerPauseBtnOn: {
-    borderColor: "rgba(224,122,31,0.95)",
+    borderColor: "rgba(255,255,255,0.95)",
   },
 
   scroll: { flex: 1, marginTop: 16 },
@@ -838,7 +838,7 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: 28,
     borderWidth: 2,
-    borderColor: "rgba(224,122,31,0.95)",
+    borderColor: "rgba(255,255,255,0.95)",
   },
   micBtn: {
     width: 48,
@@ -876,7 +876,7 @@ const styles = StyleSheet.create({
   permissionBar: {
     alignSelf: "stretch",
     backgroundColor: "rgba(214,69,69,0.15)",
-    borderColor: "rgba(214,69,69,0.4)",
+    borderColor: "rgba(0,102,204,0.4)",
     borderWidth: 1,
     padding: 10,
     borderRadius: 14,
