@@ -80,7 +80,7 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#0A0C10" },
-  content: { flex: 1, paddingHorizontal: 20, justifyContent: "center" },
+  content: { flex: 1, paddingHorizontal: 20, justifyContent: "center", paddingBottom: 60 },
   logoContainer: { alignItems: "center", marginBottom: 12 },
   logo: { width: 170, height: 62 },
   poweredBy: { color: "rgba(255,255,255,0.45)", fontSize: 13, marginTop: 4, letterSpacing: 0.5 },
