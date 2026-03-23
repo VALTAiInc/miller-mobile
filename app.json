@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Miller Continuum",
-    "slug": "valt",
+    "slug": "miller-continuum-2026",
     "version": "1.12.0",
     "orientation": "default",
     "icon": "./assets/icon.png",
@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.miller.continuum-systems",
+      "bundleIdentifier": "com.thevalt.millercontinuum",
       "buildNumber": "16",
       "icon": "./assets/images/VALT_1024x1024_V4.png",
       "infoPlist": {
