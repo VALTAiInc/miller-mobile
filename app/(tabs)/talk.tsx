@@ -670,7 +670,7 @@ export default function TalkScreen() {
               <Ionicons
                 name={headerPauseIcon as any}
                 size={22}
-                color="#E07A1F"
+                color="#0066CC"
               />
             </Pressable>
           </View>
@@ -844,7 +844,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#E07A1F",
+    backgroundColor: "#0066CC",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -866,7 +866,7 @@ const styles = StyleSheet.create({
     height: 48,
     paddingHorizontal: 18,
     borderRadius: 24,
-    backgroundColor: "#E07A1F",
+    backgroundColor: "#0066CC",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -913,7 +913,7 @@ const styles = StyleSheet.create({
   disclaimerText: { color: "#D5D7DB", fontSize: 16, lineHeight: 22 },
   disclaimerBtn: {
     marginTop: 14,
-    backgroundColor: "#E07A1F",
+    backgroundColor: "#0066CC",
     borderRadius: 14,
     paddingVertical: 12,
     alignItems: "center",
