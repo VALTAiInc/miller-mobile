@@ -24,7 +24,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import Colors from "../../constants/colors";
 
 const heroImage = require("../../assets/images/HEROIMAGE.jpg");
-const logoImage = require("../../assets/images/LOGOVALT.png");
+const logoImage = require("../../assets/images/logo1.png");
 
 const API_BASE = "https://weldwise-backend-gold-production.up.railway.app";
 
