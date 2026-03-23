@@ -10,7 +10,7 @@ const COLORS = {
   border: "#141414",
   text: "#ffffff",
   textSecondary: "rgba(255,255,255,0.70)",
-  orange: "#0066CC",
+  blue: "#0066CC",
 };
 
 export default function BlueprintsImageScreen() {
