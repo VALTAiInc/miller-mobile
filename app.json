@@ -26,12 +26,12 @@
       "package": "com.thevalt.weldwise",
       "versionCode": 5,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/VALT_1024x1024_V4.png",
+        "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#000000"
       }
     },
     "web": {
-      "favicon": "./assets/images/VALT_1024x1024_V4.png"
+      "favicon": "./assets/icon.png"
     },
     "plugins": [
       [
