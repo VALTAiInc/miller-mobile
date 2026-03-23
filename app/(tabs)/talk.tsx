@@ -848,7 +848,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  micBtnOn: { backgroundColor: "#D64545" },
+  micBtnOn: { backgroundColor: "#0066CC" },
 
   textInput: {
     flex: 1,
