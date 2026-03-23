@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
   heroTextBox: { paddingHorizontal: 18, paddingVertical: 16, backgroundColor: "rgba(0,0,0,0.72)", alignItems: "center" },
   heroTitle: { fontSize: 32, color: "#fff", letterSpacing: 2, fontWeight: "900", textAlign: "center" },
   heroSubtitle: { marginTop: 8, fontSize: 18, color: "#cfcfcf", textAlign: "center" },
-  ctaContainer: { marginTop: 10, marginBottom: 12 },
+  ctaContainer: { marginTop: 10, marginBottom: 28 },
   ctaButton: { backgroundColor: "#0066CC", borderRadius: 34, paddingVertical: 16, paddingHorizontal: 18, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 },
   ctaButtonPressed: { opacity: 0.9, transform: [{ scale: 0.99 }] },
   ctaText: { fontSize: 16, color: "#fff", letterSpacing: 0.5, fontWeight: "900" },
