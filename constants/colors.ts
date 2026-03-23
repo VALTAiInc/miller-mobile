@@ -1,7 +1,7 @@
 // constants/colors.ts
 
 export const Brand = {
-  orange: "#0066CC",
+  blue: "#0066CC",
   // add more brand colors here later if you want
 };
 

@@ -42,7 +42,7 @@ export default function BlueprintsImageScreen() {
 
         <View style={styles.viewer}>
           <View style={styles.iconWrap}>
-            <Ionicons name="image-outline" size={44} color={COLORS.orange} />
+            <Ionicons name="image-outline" size={44} color={#0066CC} />
           </View>
 
           <Text style={styles.title}>No image selected</Text>
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    backgroundColor: COLORS.orange,
+    backgroundColor: #0066CC,
     paddingVertical: 14,
     paddingHorizontal: 18,
     borderRadius: 14,
