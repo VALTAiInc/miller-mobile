@@ -17,7 +17,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.thevalt.millercontinuum",
       "buildNumber": "1",
-      "icon": "./assets/images/VALT_1024x1024_V4.png",
+      "icon": "./assets/icon.png",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
