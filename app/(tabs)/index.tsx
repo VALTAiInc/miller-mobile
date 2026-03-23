@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#0A0C10" },
   content: { flex: 1, paddingHorizontal: 20 },
   logoContainer: { alignItems: "center", marginBottom: 12 },
-  logo: { width: 280, height: 100 },
+  logo: { width: 340, height: 120 },
   poweredBy: { color: "rgba(255,255,255,0.45)", fontSize: 13, marginTop: 4, letterSpacing: 0.5 },
   heroCard: { borderRadius: 26, overflow: "hidden", backgroundColor: "#111", marginBottom: 14 },
   heroImage: { width: "100%", height: 235 },
