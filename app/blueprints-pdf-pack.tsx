@@ -16,7 +16,7 @@ import * as DocumentPicker from "expo-document-picker";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Brand } from "../constants/colors";
 
-const ACCENT = Brand?.orange ?? "#fe7725";
+const ACCENT = "#0066CC" ?? "#0066CC";
 
 type PickedPdf = {
   name: string;

@@ -5,7 +5,7 @@ import { Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
-const ACCENT = "#fe7725";
+const ACCENT = "#0066CC";
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();

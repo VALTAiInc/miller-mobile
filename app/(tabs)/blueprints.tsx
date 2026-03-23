@@ -22,7 +22,7 @@ const Brand: any =
   (ColorsModule as any).Colors ??
   {};
 
-const ACCENT = Brand.orange ?? "#fe7725";
+const ACCENT = "#0066CC" ?? "#0066CC";
 
 export default function BlueprintsScreen() {
   const insets = useSafeAreaInsets();

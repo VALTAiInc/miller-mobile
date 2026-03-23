@@ -6,7 +6,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Brand } from "../constants/colors";
 
-const ACCENT = Brand?.orange ?? "#fe7725";
+const ACCENT = "#0066CC" ?? "#0066CC";
 
 export default function BlueprintsPdfViewerScreen() {
   const insets = useSafeAreaInsets();

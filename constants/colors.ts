@@ -1,12 +1,12 @@
 // constants/colors.ts
 
 export const Brand = {
-  orange: "#f16109",
+  orange: "#0066CC",
   // add more brand colors here later if you want
 };
 
 export const Colors = {
-  primary: "#f16109",
+  primary: "#0066CC",
   background: "#0a0a0a",
   card: "#1a1a1a",
   cardLight: "#242424",
@@ -20,9 +20,9 @@ export const Colors = {
   light: {
     text: "#ffffff",
     background: "#0a0a0a",
-    tint: "#f16109",
+    tint: "#0066CC",
     tabIconDefault: "#666666",
-    tabIconSelected: "#f16109",
+    tabIconSelected: "#0066CC",
   },
 };
 

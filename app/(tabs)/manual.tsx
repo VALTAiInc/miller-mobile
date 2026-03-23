@@ -56,7 +56,7 @@ export default function ManualScreen() {
         <Text style={styles.sectionLabel}>WIRING & CIRCUIT DIAGRAMS</Text>
         {SECTIONS.map((s, i) => (
           <Pressable key={i} style={styles.card} onPress={() => open(s.url)}>
-            <View style={[styles.cardIcon, { backgroundColor: "#FF6B0015" }]}>
+            <View style={[styles.cardIcon, { backgroundColor: "#0066CC15" }]}>
               <Ionicons name={s.icon as any} size={22} color="#CC4400" />
             </View>
             <View style={{ flex: 1 }}>
