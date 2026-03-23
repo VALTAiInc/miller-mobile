@@ -42,7 +42,7 @@ export default function BlueprintsImageScreen() {
 
         <View style={styles.viewer}>
           <View style={styles.iconWrap}>
-            <Ionicons name="image-outline" size={44} color={#0066CC} />
+            <Ionicons name="image-outline" size={44} color={"#0066CC"} />
           </View>
 
           <Text style={styles.title}>No image selected</Text>
