@@ -50,9 +50,6 @@
     "extra": {
       "router": {
         "origin": "https://replit.com/"
-      },
-      "eas": {
-        "projectId": "a9402df1-8bfe-4e86-9358-11782de0d352"
       }
     },
     "owner": "thevalt"
