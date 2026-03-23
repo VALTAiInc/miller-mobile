@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Miller Continuum",
-    "slug": "miller-continuum-2026",
+    "name": "Continuum MIG Expert",
+    "slug": "continuum-mig-expert",
     "version": "1.0.0",
     "orientation": "default",
     "icon": "./assets/icon.png",
@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.thevalt.millercontinuum",
+      "bundleIdentifier": "com.thevalt.continuummig",
       "buildNumber": "1",
       "icon": "./assets/icon.png",
       "infoPlist": {
@@ -56,5 +56,12 @@
       }
     },
     "owner": "thevalt"
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "ascAppId": "6761020327"
+      }
+    }
   }
 }
