@@ -6,7 +6,7 @@ import { Audio } from "expo-av";
 import * as FileSystem from "expo-file-system/legacy";
 
 const MILLER_BLUE = "#0066CC";
-const API_BASE = "https://weldwise-backend-gold-production.up.railway.app";
+const API_BASE = "https://miller-backend-production.up.railway.app";
 
 const LANGUAGES = [
   { code: "en", label: "English", flag: "🇨🇦" },

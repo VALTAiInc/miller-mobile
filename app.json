@@ -23,7 +23,7 @@
       }
     },
     "android": {
-      "package": "com.thevalt.weldwise",
+      "package": "com.miller.continuum",
       "versionCode": 5,
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
@@ -50,6 +50,9 @@
     "extra": {
       "router": {
         "origin": "https://replit.com/"
+      },
+      "eas": {
+        "projectId": "88a48215-a6f7-4680-8545-bc8d5856d1ab"
       }
     },
     "owner": "thevalt"

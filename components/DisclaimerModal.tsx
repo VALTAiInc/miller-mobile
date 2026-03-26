@@ -22,7 +22,7 @@ export default function DisclaimerModal({ visible, onAccept }: Props) {
             <Text style={styles.title}>Important Notice</Text>
 
             <Text style={styles.body}>
-              WeldWise is an AI-powered guidance tool designed to assist
+              Miller Continuum Expert is an AI-powered guidance tool designed to assist
               welding professionals with troubleshooting, setup, and process
               recommendations.
             </Text>
@@ -39,7 +39,7 @@ export default function DisclaimerModal({ visible, onAccept }: Props) {
             </Text>
 
             <Text style={styles.body}>
-              By continuing, you acknowledge that WeldWise is a support
+              By continuing, you acknowledge that Miller Continuum Expert is a support
               tool and not a substitute for qualified human oversight.
             </Text>
           </ScrollView>
